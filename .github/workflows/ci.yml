@@ -7,33 +7,56 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout Code
         uses: actions/checkout@v4
 
+      # -----------------------------
+      # 1. Configure AWS Credentials
+      # -----------------------------
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1
+          aws-region: us-east-1   # change if needed
 
-      - name: Login to ECR
-        id: login-ecr
+      # -----------------------------
+      # 2. Login to Amazon ECR
+      # -----------------------------
+      - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and Push
+      # -----------------------------
+      # 3. Build & Push Docker Image
+      # -----------------------------
+      - name: Build & Push Image
         run: |
-          ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG=${{ github.run_number }}
-          docker build -t $ECR_REGISTRY/eks-k6-hpa-demo:$IMAGE_TAG ./app
-          docker push $ECR_REGISTRY/eks-k6-hpa-demo:$IMAGE_TAG
-          sed -i "s|latest|$IMAGE_TAG|g" k8s/deployment.yaml
+          ECR="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/eks-k6-hpa-demo"
+          docker build -t $ECR:latest .
+          docker push $ECR:latest
 
-      - name: Deploy to EKS
-        uses: azure/k8s-deploy@v5
+      # -----------------------------
+      # 4. Configure kubectl for EKS
+      # -----------------------------
+      - name: Configure kubectl for EKS
+        run: |
+          aws eks update-kubeconfig \
+            --region us-east-1 \
+            --name ${{ secrets.EKS_CLUSTER_NAME }}
+
+      # -----------------------------
+      # 5. Deploy to EKS
+      # -----------------------------
+      - name: Apply K8s manifests
+        run: |
+          kubectl apply -f k8s/
+
+      # -----------------------------
+      # 6. Run K6 load test (optional)
+      # -----------------------------
+      - name: Run K6 Test
+        uses: grafana/k6-action@v0.3.1
         with:
-          manifests: |
-            k8s/deployment.yaml
-            k8s/service.yaml
-            k8s/hpa.yaml
+          filename: k6/test.js
