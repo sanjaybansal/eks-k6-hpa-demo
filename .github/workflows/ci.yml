@@ -33,7 +33,7 @@ jobs:
       # -----------------------------
       - name: Build & Push Image
         run: |
-          ECR="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/eks-k6-hpa-demo"
+          ECR="${{ secrets.AWS_ACCESS_KEY_ID }}.dkr.ecr.us-east-1.amazonaws.com/eks-k6-hpa-demo"
           docker build -t $ECR:latest .
           docker push $ECR:latest
 
