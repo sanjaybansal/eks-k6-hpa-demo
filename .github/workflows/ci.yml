@@ -29,6 +29,12 @@ jobs:
           docker build -t $ECR_REGISTRY/eks-k6-hpa-demo:$IMAGE_TAG ./app
           docker push $ECR_REGISTRY/eks-k6-hpa-demo:$IMAGE_TAG
           sed -i "s|latest|$IMAGE_TAG|g" k8s/deployment.yaml
+      
+      - name: Configure kubectl for EKS
+        run: |
+          aws eks update-kubeconfig \
+            --region us-east-1 \
+            --name ${{ secrets.EKS_CLUSTER_NAME }}
 
       - name: Deploy to EKS
         uses: azure/k8s-deploy@v5
