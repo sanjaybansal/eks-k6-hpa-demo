@@ -33,7 +33,7 @@ jobs:
       - name: Configure kubectl for EKS
         run: |
           aws eks update-kubeconfig \
-            --region us-east-1 \
+            --region ${{ secrets.AWS_REGION }} \
             --name ${{ secrets.EKS_CLUSTER_NAME }}
 
       - name: Deploy to EKS
